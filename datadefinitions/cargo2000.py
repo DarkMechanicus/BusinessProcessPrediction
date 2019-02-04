@@ -135,3 +135,6 @@ class Cargo2000(GenericDatadefinition):
             X[0, i+leftpad, catvectorlen+4] = ((sentence[4][i]/divisors[4]) * weights[4]) #timestamp
             X[0, i+leftpad, catvectorlen+5] = ((sentence[5][i]/divisors[5]) * weights[5]) #duration
         return X
+
+    def EncodePrediction(self, data, args):
+        return self.__EncodePrediction(data, args['divisors'], args['indices'],args['feature_weights'], args['num_features'], args['catvectorlen'], args['maxlen'])

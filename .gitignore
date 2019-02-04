@@ -2,6 +2,7 @@
 *.epochlog
 *.h5
 results*.csv
+model/*
 
 # ignore uncompressed datasets
 datasets/*.csv

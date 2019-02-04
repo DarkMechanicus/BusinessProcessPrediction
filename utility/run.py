@@ -22,6 +22,55 @@ import utility.generator as generator
 import utility.exceptions as exceptions
 from utility.enums import Processor, DataGenerationPattern
 
+def Do_Preprocessing(**kwargs):
+    try:
+        args = preprocessing.Parse_Args(**kwargs)
+
+        # get dataset specific parameters
+        datadefinition = args['datadefinition']
+        args['rowstructure'] = datadefinition.GetRowstructure()
+        if args['eventlog'] == "": # get dataset defined in rowstructure if not explicitly supplied
+            args['eventlog'] = datadefinition.GetDataset()
+
+        #setup (e.g. backend specifics)
+        configuration.Configure(args)
+        
+        args = __Preprocessing(args)
+
+        # start building input matrix
+        if args['datageneration_pattern'] == DataGenerationPattern.Fit:
+            print('Vectorization...')
+            train_matrices = args['datadefinition'].CreateMatrices(args['train_sentences'],args)
+            validation_matrices = args['datadefinition'].CreateMatrices(args['validation_sentences'],args)
+            x_train = train_matrices['X']
+            y_train = train_matrices['y_t']
+            x_val = validation_matrices['X']
+            y_val = validation_matrices['y_t']
+            # AdaBoost Additions start
+            sample_weights = np.full(len(x_train), 1)
+            if args['adaboost']:
+                args['adaboost'].train_matrices = train_matrices
+                args['adaboost'].validation_matrices = validation_matrices
+                args['adaboost'].init_weights()
+                args['adaboost'].args = args
+                if args['adaboost'].resampling == False:
+                    sample_weights = args['adaboost'].weights
+                else:
+                    resampled_train = args['adaboost'].do_resample()
+                    x_train = resampled_train['X']
+                    y_train = resampled_train['y_t']
+            # AdaBoost Additions end
+            
+        elif args['datageneration_pattern'] == DataGenerationPattern.Generator:
+            print('Generators detected: Vectorization will be performed during runtime')
+        else:
+            raise ValueError("unknown value for datageneration_pattern")
+
+        return args
+    except Exception as ex:
+        # catch all, throw one exception for parsing
+        raise exceptions.ConducthorError(ex)
+
 def Train_And_Evaluate(**kwargs):
     try:
         args = preprocessing.Parse_Args(**kwargs)
@@ -144,6 +193,21 @@ def __Train_Model(args):
         y_train = train_matrices['y_t']
         x_val = validation_matrices['X']
         y_val = validation_matrices['y_t']
+        # AdaBoost Additions start
+        sample_weights = np.full(len(x_train), 1)
+        if args['adaboost']:
+            args['adaboost'].train_matrices = train_matrices
+            args['adaboost'].validation_matrices = validation_matrices
+            args['adaboost'].init_weights()
+            args['adaboost'].args = args
+            if args['adaboost'].resampling == False:
+                sample_weights = args['adaboost'].weights
+            else:
+                resampled_train = args['adaboost'].do_resample()
+                x_train = resampled_train['X']
+                y_train = resampled_train['y_t']
+        # AdaBoost Additions end
+        
     elif args['datageneration_pattern'] == DataGenerationPattern.Generator:
         print('Generators detected: Vectorization will be performed during runtime')
     else:
@@ -167,7 +231,10 @@ def __Train_Model(args):
         args['batch_size'] = args['batch_size'] * 8 #give each tpu batch_size elements    
         print('tpu detected: adjusting batch_size to ',  args['batch_size'])    
     if(args['datageneration_pattern'] == DataGenerationPattern.Fit):
-        model.fit(x_train, {'time_output':y_train}, validation_data=(x_val,y_val), verbose=verbositylevel, callbacks=callbacks, shuffle=True, batch_size=args['batch_size'], epochs=args['max_epochs'])
+        model.fit(x_train, {'time_output':y_train}, 
+        validation_data=(x_val,y_val), verbose=verbositylevel, 
+        callbacks=callbacks, shuffle=True, batch_size=args['batch_size'], 
+        epochs=args['max_epochs'], sample_weight=sample_weights)
     elif(args['datageneration_pattern'] == DataGenerationPattern.Generator):
         model.fit_generator(generator=args['train_generator'],
             validation_data=args['validation_generator'],

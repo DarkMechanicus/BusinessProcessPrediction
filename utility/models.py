@@ -40,6 +40,8 @@ def CreateCallbacks(args):
     callbacks.append(keras_impl.callbacks.CSVLogger('{}-epochlogs.epochlog'.format(args['running'])))
     if args['tensorboard'] == True:
         callsbacks.append(tensorboard_cb = TensorBoard(log_dir='./graph', histogram_freq=0, write_graph=True, write_images=True))
+    if args['adaboost'] is not None :
+        callbacks.append(args['adaboost'])
     return callbacks
 
 def CreateOptimizer(keras_impl, args):
