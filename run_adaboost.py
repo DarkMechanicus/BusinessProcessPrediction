@@ -9,9 +9,9 @@ import pruning.pruning as pruningWrapper
 import datadefinitions.cargo2000 as cargo2000
 
 sys_arv_len = len(sys.argv)
-size = int(sys.argv[1]) if sys_arv_len > 1 else 11
-epochs = int(sys.argv[2]) if sys_arv_len > 2 else 30
-resampling = (int(sys.argv[3]) == 1) if sys_arv_len > 3 else False
+size = int(sys.argv[1]) if sys_arv_len > 1 else 1
+epochs = int(sys.argv[2]) if sys_arv_len > 2 else 1
+resampling = (int(sys.argv[3]) == 1) if sys_arv_len > 3 else True
 pruning = (int(sys.argv[4]) == 1) if sys_arv_len > 4 else False
 pruning_accuracy = float(sys.argv[5]) if sys_arv_len > 5 else 0.0
 pruning_diversity = float(sys.argv[6]) if sys_arv_len > 6 else 0.0
@@ -49,10 +49,10 @@ train_args = {
     'testdata_split': 0.05,  
     'max_sequencelength': 50, 
     'batch_size': 64,   
-    'neurons': 10,  
+    'neurons': 100,  
     'dropout': 0,
     'max_epochs': epochs,
-    'layers': 1,
+    'layers': 2,
     'save_model': False,
     'adaboost': adaboostWrapper
 }
@@ -84,13 +84,17 @@ if evaluate:
             cropped_data = []
             for a in range(len(args['testdata'])):
                 cropped_data.append(args['testdata'][a][i][:prefix_size])  
+            prefix_activities = args['testdata'][0][i][:prefix_size]
+            suffix_activities = args['testdata'][0][i][prefix_size:]
+            if '!' in prefix_activities:
+                        break # make no prediction for this case, since this case has ended already 
 
-        ground_truth = args['testdata'][6][i][0] + args['offsets'][6] #undo offset
-        ground_truth_plannedtimestamp = args['testdata'][7][i][0] + args['offsets'][7] #undo offset
-        prepared_data = dataset.EncodePrediction(cropped_data, args)
-        prepared_truth = -1 if ground_truth <= ground_truth_plannedtimestamp else 1
-        test_x.append(prepared_data)
-        test_y.append(prepared_truth)
+            ground_truth = args['testdata'][6][i][0] + args['offsets'][6] #undo offset
+            ground_truth_plannedtimestamp = args['testdata'][7][i][0] + args['offsets'][7] #undo offset
+            prepared_data = dataset.EncodePrediction(cropped_data, args)
+            prepared_truth = -1 if ground_truth <= ground_truth_plannedtimestamp else 1
+            test_x.append(prepared_data)
+            test_y.append({'binary': prepared_truth, 'ground_truth': ground_truth, 'planned': ground_truth_plannedtimestamp, 'id': i, "prefix": prefix_activities, "suffix": suffix_activities})
 
     #load ensemble from disc
     adaboostWrapper.load_ensemble(evaluate_models)
@@ -105,22 +109,5 @@ if evaluate:
         exit()
 
     print('Evaluate AdaBoost Ensemble of size: {}'.format(len(adaboostWrapper.ensemble_models)))    
+    adaboostWrapper.evalute(test_x, test_y, evaluate_models)
     
-    truth_matrix = []    
-    for i in range(len(test_x)):
-        test_data = test_x[i]
-        test_solution = test_y[i]
-        ensemble_prediction = adaboostWrapper.predict(test_data)
-        print('Ensemble prediction: {} Ground Truth: {}'.format(ensemble_prediction, test_solution))
-        truth_matrix.append({'prediction': ensemble_prediction[0][0], 'ground_truth': test_solution})
-
-    correct_classifications = 0
-    for classification in truth_matrix:
-        if (classification['prediction'] > 0 and classification['ground_truth'] == 1) or (classification['prediction'] < 0 and classification['ground_truth'] == -1):
-            correct_classifications += 1
-
-    print('For {} test data sets this ensemble was right in {} cases ({} %)'.format(len(args['testdata'][0]), correct_classifications, (correct_classifications / len(args['testdata'][0]) * 100)))
-
-    #save ensemble results
-    adaboostWrapper.save_result(evaluate_models, truth_matrix)
-        
