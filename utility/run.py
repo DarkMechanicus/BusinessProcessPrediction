@@ -49,15 +49,17 @@ def Do_Preprocessing(**kwargs):
             # AdaBoost Additions start
             sample_weights = np.full(len(x_train), 1)
             if args['adaboost']:
+                args['adaboost'].args = args
                 args['adaboost'].train_matrices = train_matrices
                 args['adaboost'].init_weights()
-                args['adaboost'].args = args
                 if args['adaboost'].resampling == False:
                     sample_weights = args['adaboost'].weights
                 else:
-                    resampled_train = args['adaboost'].do_resample()
-                    x_train = resampled_train['X']
-                    y_train = resampled_train['y_t']
+                    args['traindata'] = args['adaboost'].do_resample()
+                    args['train_sentences'] = dataoperations.CreateSentences(args['traindata'])
+                    train_matrices = args['datadefinition'].CreateMatrices(args['train_sentences'], args)
+                    x_train = train_matrices['X']
+                    y_train = train_matrices['y_t']                
             # AdaBoost Additions end
             
         elif args['datageneration_pattern'] == DataGenerationPattern.Generator:

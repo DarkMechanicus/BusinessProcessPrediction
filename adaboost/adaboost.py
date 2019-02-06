@@ -101,14 +101,14 @@ class AdaBoostWrapper(keras_impl.callbacks.Callback):
         if temp <= 0.0:
             temp = 0.000000001 
 
-        stage = np.log([temp])[0]
+        stage = 0.5 * np.log([temp])[0]
 
         print('[AdaBoost] This model has a weight of {} and a total error of {}'.format(stage, total_error))        
         self.ensemble_weights.append(stage);
 
         print('[AdaBoost] Modifing weights...')
         for i in range(len(self.weights)):
-            new_weight = self.weights[i] * np.exp(stage * simple_error[i]);
+            new_weight = self.weights[i] * np.exp((-stage) * simple_error[i]);
             self.weights[i] = new_weight
 
         print('[AdaBoost] Post training modifications done!')
@@ -140,8 +140,8 @@ class AdaBoostWrapper(keras_impl.callbacks.Callback):
                 'g_t': test_solution['ground_truth'],
                 'g_t_pts': test_solution['planned'],
                 'g_t_b': test_solution['binary'],
-                'prefix': test_solution['prefix'],
-                'suffix': test_solution['suffix']
+                'prefix': ' '.join(test_solution['prefix']),
+                'suffix': ' '.join(test_solution['suffix'])
             }
             results.append(result)
             if result['e_p_b'] == result['g_t_b']:
@@ -177,12 +177,11 @@ class AdaBoostWrapper(keras_impl.callbacks.Callback):
             for i in range(len(self.ensemble_models)):
                 model = self.ensemble_models[i]
                 weight = self.ensemble_weights[i]
-                prediction = model.predict(data, verbose=0)
+                prediction = model.predict(data, verbose=0)[0][0]
                 prediction = (prediction * self.args['divisors'][6]) + self.args['offsets'][6]
-                prediction = prediction[0][0]
                 weighted_predictions.append(prediction * weight)
         
-        ensemble_prediction = sum(weighted_predictions)
+        ensemble_prediction = sum(weighted_predictions) / len(weighted_predictions)
 
         return ensemble_prediction
 
