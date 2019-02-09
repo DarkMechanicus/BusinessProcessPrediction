@@ -5,7 +5,7 @@ import tensorflow as tf
 import os
 import utility.models as models
 import random, math, datetime, csv, glob
-import accuracy_measures as acc
+import ensembles.accuracy_measures as acc
 from ensembles.ensemble import prediction_correct
 
 class AdaBoostWrapper(keras_impl.callbacks.Callback):
@@ -17,9 +17,8 @@ class AdaBoostWrapper(keras_impl.callbacks.Callback):
     sequence_weight = []
     val_weights = []
 
-    def __init__(self, resampling, resample_size, can_weights_decrease, modify_validation_data):
+    def __init__(self, resampling, can_weights_decrease, modify_validation_data):
         self.resampling = resampling
-        self.resample_size = resample_size
         self.can_weights_decrease = can_weights_decrease
         self.modify_validation_data = modify_validation_data
 
@@ -30,9 +29,6 @@ class AdaBoostWrapper(keras_impl.callbacks.Callback):
         length = len(self.train_matrices['X'])
         seq_length = len(self.args['traindata'][0])
         val_length = len(self.validation_matrices['X'])
-        #for i in range(lenght):
-        #    self.weights.append(1/lenght)
-        #self.weights = np.asarray(self.weights)
 
         self.weights = np.full(length, 1/length)
         self.sequence_weight = np.full(seq_length, 1/seq_length)
@@ -46,17 +42,28 @@ class AdaBoostWrapper(keras_impl.callbacks.Callback):
         # based on regularization.ShuffleArray
         state = np.random.get_state()
         sample_data = []
-        total_weight = math.ceil(sum(self.sequence_weight) * self.resample_size / len(data))
+        print('Sequence Weights: ', self.sequence_weight)
+        # resample in a away that gives the smallest weight exactly 1 sample
+        avg_weight = sum(self.sequence_weight) / len(self.sequence_weight)
+        print('Avg weight', avg_weight)
+        resample_size = math.ceil(10 / avg_weight)
+        total_weight = math.ceil(sum(self.sequence_weight) * resample_size / len(data))
+        print('Resample Size: ', resample_size)
+        print('Total Weight: ', total_weight)
+        print('Datesize Pre: ', len(data))
         for i in range(len(data)):
             scaled_data = []
             for j in range(len(data[i])):
-                scaled_count = math.ceil(self.sequence_weight[j] * self.resample_size)
+                scaled_count = math.ceil(self.sequence_weight[j] * resample_size)
                 for k in range(scaled_count):
                     scaled_data.append(data[i])
                 np.random.shuffle(scaled_data)
                 scaled_data = scaled_data[::total_weight]
                 np.random.set_state(state)
             sample_data.append(scaled_data[0])
+            print('Scaled Size: ', len(scaled_data))
+        
+        print('Datasize Post: ', len(sample_data))
         return sample_data
            
     def __adjust_training_weights(self):

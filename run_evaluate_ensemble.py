@@ -1,11 +1,22 @@
 import utility.run as run
 from utility.enums import DataGenerationPattern, Processor, RnnType
 import ensembles.ensemble as evaluation
-import glob, os, csv, time
+import glob, os, csv, time, argparse, sys
 import ensembles.pruning as pruningWrapper
 import utility.dataoperations as dataoperations
 
 import datadefinitions.cargo2000 as cargo2000
+
+
+# Get arguments from commandline
+parser = argparse.ArgumentParser()
+parser.add_argument('--log_file', help="if true programm will log to a timestamped log file. Defaults to false", type=bool, default=False)
+sys_args = parser.parse_args()
+
+if sys_args.log_file:
+    std_out = sys.stdout
+    log_file = open('ensemble_evaluation.log', 'w')
+    sys.stdout = log_file
 
 # variables for evaluation
 pruning_accuracy_lower_bound = [0.1]
@@ -102,3 +113,7 @@ for ensemble_type in glob.glob('*'):
         })      
             
     os.chdir(models_path)
+
+if sys_args.log_file:
+    sys.stdout = std_out
+    log_file.close()

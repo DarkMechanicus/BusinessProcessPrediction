@@ -2,20 +2,30 @@ import ensembles.ensemble as utility
 import utility.run as run
 from utility.enums import DataGenerationPattern, Processor, RnnType
 import ensembles.adaboost as wrapper
+import argparse, sys
 
 import datadefinitions.cargo2000 as cargo2000
 
 path = utility.get_model_path('adaboost')
 
-# Bagging variables
-max_epochs = 10
-ensemble_size = 5
-resampling = False
-resampling_size = 100
-can_decrease_weights = False
-modify_validation = False
+# Get arguments from commandline
+parser = argparse.ArgumentParser()
+parser.add_argument('--max_epochs', help='maximum of epochs the models will be trained for. Defaults to 300', type=int, default=300)
+parser.add_argument('--ensemble_size', help='amount of models that will be trained in this ensemble. Defaults to 500', type=int, default=500)
+parser.add_argument('--resampling', help='if true resampling will be used. Defaults to false', type=bool, default=False)
+parser.add_argument('--decrease_weights', help="if true weights will be decreased on successful predictions. Defauls to false", type=bool, default=False)
+parser.add_argument('--modify_validation', help="if true validation data will be evaluated and weighted in the same way the trainings data is. Defaults to false", type=bool, default=False)
+parser.add_argument('--log_file', help="if true programm will log to a timestamped log file. Defaults to false", type=bool, default=False)
+sys_args = parser.parse_args()
 
-adaboost = wrapper.AdaBoostWrapper(resampling, resampling_size, can_decrease_weights, modify_validation)
+if sys_args.log_file:
+    std_out = sys.stdout
+    log_file = open('{}/ensemble_training.log'.format(path), 'w')
+    sys.stdout = log_file
+
+# Bagging variables
+
+adaboost = wrapper.AdaBoostWrapper(sys_args.resampling, sys_args.decrease_weights, sys_args.modify_validation)
 
 train_args = {
     'datageneration_pattern': DataGenerationPattern.Fit,
@@ -30,13 +40,13 @@ train_args = {
     'batch_size': 64,   
     'neurons': 100,  
     'dropout': 0,
-    'max_epochs': max_epochs,
+    'max_epochs': sys_args.max_epochs,
     'layers': 2,
     'save_model': False,
     'adaboost': adaboost
 }
 
-for i in range(ensemble_size):
+for i in range(sys_args.ensemble_size):
     print('[AdaBoost] Training Model {:03}...'.format(i+1))
     str_model_name = path + '/{:03}'.format(i)
     train_args['running'] = str_model_name
@@ -44,3 +54,7 @@ for i in range(ensemble_size):
     print('[AdaBoost] Training Model {:03} done.'.format(i+1))
 
 adaboost.save_ensemble_weights(path)
+
+if sys_args.log_file:
+    sys.stdout = std_out
+    log_file.close()
