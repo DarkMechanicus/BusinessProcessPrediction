@@ -76,7 +76,7 @@ class GenericEnsembleWrapper():
                     self.weights[int(row[0])] = float(row[1])
         self.path = path
 
-    def evaluate(self, samples, solutions, args, ensemble_type, ensemble, pruningParams):
+    def evaluate(self, samples, solutions, args, ensemble_type, ensemble, pruningParams, original_size, pruned_size):
         confusion_matrix = {
             'tp': 0,
             'fp': 0,
@@ -103,6 +103,8 @@ class GenericEnsembleWrapper():
                     'a_l_b': pruningParams['a_l_b'],
                     'd_m': pruningParams['d_m'],
                     'd_l_b': pruningParams['d_l_b'],
+                    'original_size': original_size,
+                    'pruned_size': pruned_size,
                     'e_p': ensemble_prediction,
                     'e_p_b': ensemble_binary,
                     'g_t': test_solution['ground_truth'],

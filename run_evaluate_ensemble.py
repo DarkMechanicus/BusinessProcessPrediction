@@ -52,7 +52,8 @@ base_path = os.getcwd()
 os.chdir('models')
 with open('../ensemble_results.csv'.format(), 'w', newline='') as result_file:
     writer = csv.writer(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(["type", "ensemble", "sequence_id", "accuracy_method" ,"accuracy_lower_bound", "diversity_method", "diversity_lower_bound", "ensemble_prediction", "ensemble_prediction_binary", "ground_truth", "ground_truth_plannedtimestamp", "ground_truth_binary", "prefix", "suffix"])
+    writer.writerow(["type", "ensemble", "sequence_id", "accuracy_method" ,"accuracy_lower_bound", "diversity_method", "diversity_lower_bound", 
+    "original_size", "pruned_size", "ensemble_prediction", "ensemble_prediction_binary", "ground_truth", "ground_truth_plannedtimestamp", "ground_truth_binary", "prefix", "suffix"])
     
 with open('../ensemble_accuracy_measurements.csv'.format(), 'w', newline='') as acc_file:
     writer = csv.writer(acc_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -99,7 +100,7 @@ for ensemble_type in glob.glob('*'):
             print(time.time() - pruning_start)
             if len(ensemble.models) == 0:
                 continue
-            ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params)
+            ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params, len(original_models), len(pruned_data['models']))
             print(time.time() - loop_start)
 
         ensemble.models = original_models
@@ -110,7 +111,7 @@ for ensemble_type in glob.glob('*'):
             'a_l_b': 0.0,
             'd_m': 'None',
             'd_l_b': 0.0
-        })      
+        }, len(original_models), len(original_models))      
             
     os.chdir(models_path)
 
