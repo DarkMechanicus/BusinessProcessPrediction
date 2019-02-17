@@ -94,16 +94,22 @@ class PruningWrapper:
         if self.diversity_method == DiversityPruningMethods.DisagreementMeasure:
                 return (matrix['one_correct'] + matrix['two_correct']) / matrix['total']
         elif self.diversity_method == DiversityPruningMethods.DoubleFaultMeasure:
-                return 1 - (matrix['neither_correct'] / matrix['total'])
+                result = (matrix['neither_correct'] / matrix['total'])
+                normResult = (-result) + 1
+                return normResult
         elif self.diversity_method == DiversityPruningMethods.CorrelationCoefficient:
                 top = (matrix['both_correct'] * matrix['neither_correct']) - (matrix['one_correct'] * matrix['two_correct'])
                 bottom_total = (matrix['both_correct'] + matrix['one_correct']) * (matrix['two_correct'] + matrix['neither_correct']) * (matrix['both_correct'] + matrix['two_correct']) * (matrix['one_correct'] + matrix['neither_correct'])
                 bottom = np.sqrt(bottom_total)
-                return 1 - (top / bottom)
+                result = (top / bottom)
+                normResult = (result * -0.5) + 0.5
+                return 
         elif self.diversity_method == DiversityPruningMethods.QStatistics:
                 a = (matrix['both_correct'] * matrix['neither_correct'])
                 b = (matrix['one_correct'] * matrix['two_correct'])
-                return 1 - ((a - b) / (a + b))
+                result = ((a - b) / (a + b))
+                normResult = (result * -0.5) + 0.5
+                return normResult
         else:
                 raise ValueError("unknown value for diviersity method: {}".format(self.diversity_method))
 
