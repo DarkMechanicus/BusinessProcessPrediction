@@ -21,6 +21,7 @@ if sys_args.log_file:
 # variables for evaluation
 pruning_accuracy_lower_bound = [0.1]
 pruning_diversity_lower_bound = [0.1]
+pruning_ensemble_sizes = [3, 50, 100, 150, 200, 250, 300]
 
 train_args = {
     'datageneration_pattern': DataGenerationPattern.Fit,
@@ -69,49 +70,50 @@ for ensemble_type in glob.glob('*'):
     ensemble_result_data = []
     ensemble = evaluation.GenericEnsembleWrapper()
     for models in glob.glob('*'):
-        ensemble.load_models(models, args)
-        original_models = ensemble.models
-        original_weights = ensemble.weights
+        for max_size in pruning_ensemble_sizes:
+            ensemble.load_models(models, max_size, args)
+            original_models = ensemble.models
+            original_weights = ensemble.weights
 
-        pruning_param_combinations = []
-        for accuracy_lower_bound in pruning_accuracy_lower_bound:
-            for diversity_lower_bound in pruning_diversity_lower_bound:
-                for accuracy_method in pruningWrapper.AccuracyPruningMethods:
-                    for diversity_method in pruningWrapper.DiversityPruningMethods:
-                        pruining_params = {
-                            'a_l_b': accuracy_lower_bound,
-                            'd_l_b': diversity_lower_bound,
-                            'a_m': accuracy_method.value,
-                            'd_m': diversity_method.value
-                        }
-                        pruning_param_combinations.append(pruining_params)
-        
-        for params in pruning_param_combinations:
-            loop_start = time.time()
-            print(params)
+            pruning_param_combinations = []
+            for accuracy_lower_bound in pruning_accuracy_lower_bound:
+                for diversity_lower_bound in pruning_diversity_lower_bound:
+                    for accuracy_method in pruningWrapper.AccuracyPruningMethods:
+                        for diversity_method in pruningWrapper.DiversityPruningMethods:
+                            pruining_params = {
+                                'a_l_b': accuracy_lower_bound,
+                                'd_l_b': diversity_lower_bound,
+                                'a_m': accuracy_method.value,
+                                'd_m': diversity_method.value
+                            }
+                            pruning_param_combinations.append(pruining_params)
+            
+            for params in pruning_param_combinations:
+                loop_start = time.time()
+                print(params)
+                ensemble.models = original_models
+                ensemble.weights = original_weights
+                pruner = pruningWrapper.PruningWrapper(params, args)
+                pruning_start = time.time()
+                print("Pruning...")
+                pruned_data = pruner.do_pruning(ensemble.models, ensemble.weights, test_x, test_y, models)
+                ensemble.models = pruned_data['models']
+                ensemble.weights = pruned_data['weights']
+                print(time.time() - pruning_start)
+                if len(ensemble.models) == 0:
+                    continue
+                ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params, len(original_models), len(pruned_data['models']))
+                print(time.time() - loop_start)
+
             ensemble.models = original_models
             ensemble.weights = original_weights
-            pruner = pruningWrapper.PruningWrapper(params, args)
-            pruning_start = time.time()
-            print("Pruning...")
-            pruned_data = pruner.do_pruning(ensemble.models, ensemble.weights, test_x, test_y, models)
-            ensemble.models = pruned_data['models']
-            ensemble.weights = pruned_data['weights']
-            print(time.time() - pruning_start)
-            if len(ensemble.models) == 0:
-                continue
-            ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params, len(original_models), len(pruned_data['models']))
-            print(time.time() - loop_start)
-
-        ensemble.models = original_models
-        ensemble.weights = original_weights
-        ensemble.load_models(models, args)
-        ensemble.evaluate(test_x, test_y, args, ensemble_type, models, {
-            'a_m': 'None',
-            'a_l_b': 0.0,
-            'd_m': 'None',
-            'd_l_b': 0.0
-        }, len(original_models), len(original_models))      
+            ensemble.load_models(models, args)
+            ensemble.evaluate(test_x, test_y, args, ensemble_type, models, {
+                'a_m': 'None',
+                'a_l_b': 0.0,
+                'd_m': 'None',
+                'd_l_b': 0.0
+            }, len(original_models), len(original_models))      
             
     os.chdir(models_path)
 

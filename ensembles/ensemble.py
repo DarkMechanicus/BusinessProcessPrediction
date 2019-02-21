@@ -59,13 +59,15 @@ import numpy, csv
 import glob
 import utility.models as modelWrapper
 class GenericEnsembleWrapper():
-    def load_models(self, path, args):
+    def load_models(self, path, max_size, args):
         self.models = []
         for model_name in glob.glob('{}/*-model.h5'.format(path)):
             print('[Ensemble] Loading model {}...'.format(model_name))
             model = modelWrapper.CreateModel(args)
             model.load_weights('{}'.format(model_name))
             self.models.append(model)
+            if len(self.models) >= max_size:
+                break
         
         self.weights = numpy.full(len(self.models), 1.0)
         if os.path.exists('{}/ensemble_weights.csv'.format(path)):
@@ -74,6 +76,8 @@ class GenericEnsembleWrapper():
                 next(reader, None)
                 for row in reader:
                     self.weights[int(row[0])] = float(row[1])
+                    if len(self.weights) >= max_size:
+                        break
         self.path = path
 
     def evaluate(self, samples, solutions, args, ensemble_type, ensemble, pruningParams, original_size, pruned_size):
