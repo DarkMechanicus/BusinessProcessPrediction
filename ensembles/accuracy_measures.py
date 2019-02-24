@@ -22,7 +22,9 @@ def compute_false_positive_rate(confusion_matrix):
     sum = confusion_matrix['tn'] + confusion_matrix['fp']
     if sum == 0:
         return np.nan
-    return confusion_matrix['fp'] / sum
+    result = confusion_matrix['fp'] / sum
+    normResult = (-result) + 1
+    return normResult
 
 def compute_negative_prediction_value(confusion_matrix):
     sum = confusion_matrix['tn'] + confusion_matrix['tp']
@@ -47,4 +49,6 @@ def compute_mcc(confusion_matrix):
     bottom = np.sqrt(bottom)
     if bottom == 0:
         return np.nan
-    return top / bottom
+    result = top / bottom
+    normResult = (0.5 * result) + 0.5
+    return normResult
