@@ -12,3 +12,5 @@ datasets/*.csv.dict
 *.tfevents*
 
 *.log
+
+*.csv
