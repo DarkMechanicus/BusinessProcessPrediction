@@ -92,7 +92,6 @@ class GenericEnsembleWrapper():
         # open save file, so we can write to the file when we get the results
         with open('../ensemble_results.csv'.format(), 'a', newline='') as result_file:
             writer = csv.writer(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            loop_start = time.time()
             print("Getting {} predictions...".format(len(samples)))
             for i in range(len(samples)):
                 test_data = samples[i]
@@ -126,8 +125,6 @@ class GenericEnsembleWrapper():
                     confusion_matrix['fn'] += (1 if result['e_p_b'] < 0 else 0)
                 confusion_matrix['total'] += 1
             
-            print(time.time() - loop_start)
-
         # compute accuracy measures
         acc_results = {
             'precision': acc.compute_precision(confusion_matrix),
@@ -143,7 +140,7 @@ class GenericEnsembleWrapper():
         #save accuracy measures
         with open('../ensemble_accuracy_measurements.csv'.format(), 'a', newline='') as acc_file:
             writer = csv.writer(acc_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow([ensemble_type, ensemble, pruningParams['a_m'], pruningParams['a_l_b'], pruningParams['d_m'], pruningParams['d_l_b']] + list(acc_results.values()))
+            writer.writerow([ensemble_type, ensemble, pruningParams['a_m'], pruningParams['a_l_b'], pruningParams['d_m'], pruningParams['d_l_b']], original_size, pruned_size + list(acc_results.values()))
 
     def __predict(self, data, args):
         graph = tf.get_default_graph()

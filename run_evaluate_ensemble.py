@@ -13,11 +13,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--log_file', help="if true programm will log to a timestamped log file. Defaults to false", type=bool, default=False)
 sys_args = parser.parse_args()
 
-if sys_args.log_file:
-    std_out = sys.stdout
-    log_file = open('ensemble_evaluation.log', 'w')
-    sys.stdout = log_file
-
 # variables for evaluation
 pruning_accuracy_lower_bound = [0.1]
 pruning_diversity_lower_bound = [0.1]
@@ -51,17 +46,27 @@ if not os.path.exists('models'):
 
 base_path = os.getcwd()
 os.chdir('models')
-with open('../ensemble_results.csv'.format(), 'w', newline='') as result_file:
+
+if sys_args.log_file:
+    std_out = sys.stdout
+    log_file = open('ensemble_evaluation.log', 'w')
+    sys.stdout = log_file
+
+print("Create results file...")
+with open('ensemble_results.csv'.format(), 'w', newline='') as result_file:
     writer = csv.writer(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
     writer.writerow(["type", "ensemble", "sequence_id", "accuracy_method" ,"accuracy_lower_bound", "diversity_method", "diversity_lower_bound", 
     "original_size", "pruned_size", "ensemble_prediction", "ensemble_prediction_binary", "ground_truth", "ground_truth_plannedtimestamp", "ground_truth_binary", "prefix", "suffix"])
-    
-with open('../ensemble_accuracy_measurements.csv'.format(), 'w', newline='') as acc_file:
-    writer = csv.writer(acc_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(["type", "ensemble", "accuracy_method", "accuracy_lower_bound", "diversity_method", "diversity_lower_bound", 'precision', 'recall', 'specificity', 'false_positive_rate', 'negative_prediction_value', 'accuracy', 'f1', 'mcc'])
 
+print("Create accuracy measures file...")
+with open('ensemble_accuracy_measurements.csv'.format(), 'w', newline='') as acc_file:
+    writer = csv.writer(acc_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(["type", "ensemble", "accuracy_method", "accuracy_lower_bound", "diversity_method", "diversity_lower_bound", "original_size", "pruned_size", 'precision', 'recall', 'specificity', 'false_positive_rate', 'negative_prediction_value', 'accuracy', 'f1', 'mcc'])
+
+print("Running through ensembles types...")
 for ensemble_type in glob.glob('*'):
     if not os.path.isdir(ensemble_type):
+        print("{} is not a directory".format(ensemble_type))
         continue
     
     models_path = os.getcwd()
@@ -70,7 +75,9 @@ for ensemble_type in glob.glob('*'):
     ensemble_result_data = []
     ensemble = evaluation.GenericEnsembleWrapper()
     for models in glob.glob('*'):
+        print(models)
         for max_size in pruning_ensemble_sizes:
+            print('Do run for {} models...'.format(max_size))
             ensemble.load_models(models, max_size, args)
             original_models = ensemble.models
             original_weights = ensemble.weights
@@ -89,31 +96,19 @@ for ensemble_type in glob.glob('*'):
                             pruning_param_combinations.append(pruining_params)
             
             for params in pruning_param_combinations:
-                loop_start = time.time()
-                print(params)
+                print('Do configuration:\n{}'.format(params))
                 ensemble.models = original_models
                 ensemble.weights = original_weights
                 pruner = pruningWrapper.PruningWrapper(params, args)
-                pruning_start = time.time()
-                print("Pruning...")
+                print("Start pruning...")
                 pruned_data = pruner.do_pruning(ensemble.models, ensemble.weights, test_x, test_y, models)
                 ensemble.models = pruned_data['models']
                 ensemble.weights = pruned_data['weights']
-                print(time.time() - pruning_start)
                 if len(ensemble.models) == 0:
+                    print("Abort for configuration {}, because there are no more models.".format(params))
                     continue
-                ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params, len(original_models), len(pruned_data['models']))
-                print(time.time() - loop_start)
-
-            ensemble.models = original_models
-            ensemble.weights = original_weights
-            ensemble.load_models(models, args)
-            ensemble.evaluate(test_x, test_y, args, ensemble_type, models, {
-                'a_m': 'None',
-                'a_l_b': 0.0,
-                'd_m': 'None',
-                'd_l_b': 0.0
-            }, len(original_models), len(original_models))      
+                print("Start evaluation...")
+                ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params, len(original_models), len(pruned_data['models']))   
             
     os.chdir(models_path)
 

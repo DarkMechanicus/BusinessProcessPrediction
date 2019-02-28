@@ -119,7 +119,7 @@ class PruningWrapper:
         elif self.accuracy_method == AccuracyPruningMethods.Recall:
             return acc.compute_recall(matrix)
         elif self.accuracy_method == AccuracyPruningMethods.Specificity:
-            return acc.compute_specificity
+            return acc.compute_specificity(matrix)
         elif self.accuracy_method == AccuracyPruningMethods.FalsePositiveRate:
             return acc.compute_false_positive_rate(matrix)
         elif self.accuracy_method == AccuracyPruningMethods.NegativePredictionValue:
