@@ -140,7 +140,7 @@ class GenericEnsembleWrapper():
         #save accuracy measures
         with open('../ensemble_accuracy_measurements.csv'.format(), 'a', newline='') as acc_file:
             writer = csv.writer(acc_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow([ensemble_type, ensemble, pruningParams['a_m'], pruningParams['a_l_b'], pruningParams['d_m'], pruningParams['d_l_b']], original_size, pruned_size + list(acc_results.values()))
+            writer.writerow([ensemble_type, ensemble, pruningParams['a_m'], pruningParams['a_l_b'], pruningParams['d_m'], pruningParams['d_l_b'], original_size, pruned_size] + list(acc_results.values()))
 
     def __predict(self, data, args):
         graph = tf.get_default_graph()
