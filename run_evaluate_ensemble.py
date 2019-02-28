@@ -26,7 +26,7 @@ train_args = {
     #'bagging': True, 
     #'bagging_size': bagging_size, 
     'validationdata_split': 0.05, 
-    'testdata_split': 0.05,  
+    'testdata_split': 0.3333,  
     'max_sequencelength': 50, 
     'batch_size': 64,   
     'neurons': 100,  
@@ -39,7 +39,8 @@ train_args = {
 
 args = run.Do_Preprocessing(**train_args)
 args['test_sentences'] = dataoperations.CreateSentences(args['testdata'])
-test_x, test_y = evaluation.prepare_data(args)
+test_x, test_y = evaluation.prepare_data(args, 'testdata')
+val_x, val_y = evaluation.prepare_data(args, 'validationdata')
 
 if not os.path.exists('models'):
     exit()
@@ -101,7 +102,7 @@ for ensemble_type in glob.glob('*'):
                 ensemble.weights = original_weights
                 pruner = pruningWrapper.PruningWrapper(params, args)
                 print("Start pruning...")
-                pruned_data = pruner.do_pruning(ensemble.models, ensemble.weights, test_x, test_y, models)
+                pruned_data = pruner.do_pruning(ensemble.models, ensemble.weights, val_x, val_y, models)
                 ensemble.models = pruned_data['models']
                 ensemble.weights = pruned_data['weights']
                 if len(ensemble.models) == 0:

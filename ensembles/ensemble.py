@@ -31,29 +31,29 @@ def get_model_path(subfolder_name):
     
     return curr_path
 
-def prepare_data(args):
-    print('[Ensemble] Preparing test data...')
-    test_x = []
-    test_y = []
-    for i in range(len(args['testdata'][0])):
-        sequencelength = len(args['testdata'][0][i]) - 1 #minus eol character
+def prepare_data(args, data):
+    print('[Ensemble] Preparing data: {}...'.format(data))
+    data_x = []
+    data_y = []
+    for i in range(len(args[data][0])):
+        sequencelength = len(args[data][0][i]) - 1 #minus eol character
         for prefix_size in range(1,sequencelength):   
             cropped_data = []
-            for a in range(len(args['testdata'])):
-                cropped_data.append(args['testdata'][a][i][:prefix_size])  
-            prefix_activities = args['testdata'][0][i][:prefix_size]
-            suffix_activities = args['testdata'][0][i][prefix_size:]
+            for a in range(len(args[data])):
+                cropped_data.append(args[data][a][i][:prefix_size])  
+            prefix_activities = args[data][0][i][:prefix_size]
+            suffix_activities = args[data][0][i][prefix_size:]
             if '!' in prefix_activities:
                         break # make no prediction for this case, since this case has ended already 
 
-            ground_truth = args['testdata'][6][i][0] + args['offsets'][6] #undo offset
-            ground_truth_plannedtimestamp = args['testdata'][7][i][0] + args['offsets'][7] #undo offset
+            ground_truth = args[data][6][i][0] + args['offsets'][6] #undo offset
+            ground_truth_plannedtimestamp = args[data][7][i][0] + args['offsets'][7] #undo offset
             prepared_data = args['datadefinition'].EncodePrediction(cropped_data, args)
             prepared_truth = -1 if ground_truth <= ground_truth_plannedtimestamp else 1
-            test_x.append(prepared_data)
-            test_y.append({'binary': prepared_truth, 'ground_truth': ground_truth, 'planned': ground_truth_plannedtimestamp, 'id': i, "prefix": prefix_activities, "suffix": suffix_activities})
+            data_x.append(prepared_data)
+            data_y.append({'binary': prepared_truth, 'ground_truth': ground_truth, 'planned': ground_truth_plannedtimestamp, 'id': i, "prefix": prefix_activities, "suffix": suffix_activities})
 
-    return test_x, test_y
+    return data_x, data_y
 
 import numpy, csv
 import glob

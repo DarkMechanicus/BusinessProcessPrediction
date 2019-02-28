@@ -28,7 +28,7 @@ train_args = {
     'bagging': True, 
     'bagging_size': sys_args.bagging_size, 
     'validationdata_split': 0.05, 
-    'testdata_split': 0.05,  
+    'testdata_split': 0.3333,  
     'max_sequencelength': 50, 
     'batch_size': 64,   
     'neurons': 100,  
