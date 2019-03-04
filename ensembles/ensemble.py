@@ -130,11 +130,13 @@ class GenericEnsembleWrapper():
             'precision': acc.compute_precision(confusion_matrix),
             'recall': acc.compute_recall(confusion_matrix),
             'specificity': acc.compute_specificity(confusion_matrix),
-            'false_positive_rate': acc.compute_false_positive_rate(confusion_matrix),
+            'false_positive_rate_norm': acc.compute_false_positive_rate(confusion_matrix),
+            'false_positive_rate': acc.compute_false_positive_rate(confusion_matrix, False),
             'negative_prediction_value': acc.compute_negative_prediction_value(confusion_matrix),
             'accuracy': acc.compute_accuracy(confusion_matrix),
             'f1': acc.compute_f1(confusion_matrix),
-            'mcc': acc.compute_mcc(confusion_matrix)
+            'mcc_norm': acc.compute_mcc(confusion_matrix),
+            'mcc': acc.compute_mcc(confusion_matrix, False)
         }
 
         #save accuracy measures

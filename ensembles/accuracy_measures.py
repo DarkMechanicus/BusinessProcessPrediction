@@ -18,11 +18,14 @@ def compute_specificity(confusion_matrix):
         return np.nan
     return confusion_matrix['tn'] / sum
 
-def compute_false_positive_rate(confusion_matrix):
+def compute_false_positive_rate(confusion_matrix, norm = True):
     sum = confusion_matrix['tn'] + confusion_matrix['fp']
     if sum == 0:
         return np.nan
     result = confusion_matrix['fp'] / sum
+    if norm == False:
+        return result
+    
     normResult = (-result) + 1
     return normResult
 
@@ -40,7 +43,7 @@ def compute_f1(confusion_matrix):
     r = compute_recall(confusion_matrix)
     return 2 * (( p * r ) / (p + r))
 
-def compute_mcc(confusion_matrix):
+def compute_mcc(confusion_matrix, norm = True):
     top = confusion_matrix['tp'] * confusion_matrix['tn'] - confusion_matrix['fp'] * confusion_matrix['fn']
     bottom = confusion_matrix['tp'] + confusion_matrix['fn']
     bottom *= confusion_matrix['tp'] + confusion_matrix['fp']
@@ -50,5 +53,8 @@ def compute_mcc(confusion_matrix):
     if bottom == 0:
         return np.nan
     result = top / bottom
+    if norm == False:
+        return result
+    
     normResult = (0.5 * result) + 0.5
     return normResult

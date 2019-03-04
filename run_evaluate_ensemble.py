@@ -62,7 +62,7 @@ with open('ensemble_results.csv'.format(), 'w', newline='') as result_file:
 print("Create accuracy measures file...")
 with open('ensemble_accuracy_measurements.csv'.format(), 'w', newline='') as acc_file:
     writer = csv.writer(acc_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(["type", "ensemble", "accuracy_method", "accuracy_lower_bound", "diversity_method", "diversity_lower_bound", "original_size", "pruned_size", 'precision', 'recall', 'specificity', 'false_positive_rate', 'negative_prediction_value', 'accuracy', 'f1', 'mcc'])
+    writer.writerow(["type", "ensemble", "accuracy_method", "accuracy_lower_bound", "diversity_method", "diversity_lower_bound", "original_size", "pruned_size", 'precision', 'recall', 'specificity', 'false_positive_rate_norm', 'false_positive_rate', 'negative_prediction_value', 'accuracy', 'f1', 'mcc_norm', 'mcc'])
 
 print("Running through ensembles types...")
 for ensemble_type in glob.glob('*'):
