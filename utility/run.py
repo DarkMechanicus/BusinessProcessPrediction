@@ -188,9 +188,7 @@ def __Train_Model(args):
                     validation_matrices = args['datadefinition'].CreateMatrices(args['validation_sentences'], args)
                     args['adaboost'].validation_matrices = validation_matrices
                     x_val = validation_matrices['X']
-                    y_val = train_matrices['y_t']  
-
-
+                    y_val = validation_matrices['y_t']  
         # AdaBoost Additions end
         
     elif args['datageneration_pattern'] == DataGenerationPattern.Generator:
