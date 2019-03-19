@@ -42,6 +42,25 @@ def Do_Preprocessing(**kwargs):
         # catch all, throw one exception for parsing
         raise exceptions.ConducthorError(ex)
 
+def Train_Only(**kwargs):
+    try:
+        args = preprocessing.Parse_Args(**kwargs)
+
+        # get dataset specific parameters
+        datadefinition = args['datadefinition']
+        args['rowstructure'] = datadefinition.GetRowstructure()
+        if args['eventlog'] == "": # get dataset defined in rowstructure if not explicitly supplied
+            args['eventlog'] = datadefinition.GetDataset()
+
+        #setup (e.g. backend specifics)
+        configuration.Configure(args)
+        
+        args = __Preprocessing(args)
+        model = __Train_Model(args)
+    except Exception as ex:
+        # catch all, throw one exception for parsing
+        raise exceptions.ConducthorError(ex)
+
 def Train_And_Evaluate(**kwargs):
     try:
         args = preprocessing.Parse_Args(**kwargs)

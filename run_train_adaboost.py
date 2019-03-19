@@ -50,7 +50,7 @@ for i in range(sys_args.ensemble_size):
     print('[AdaBoost] Training Model {:03}...'.format(i+1))
     str_model_name = path + '/{:03}'.format(i)
     train_args['running'] = str_model_name
-    run.Train_And_Evaluate(**train_args)
+    run.Train_Only(**train_args)
     print('[AdaBoost] Training Model {:03} done.'.format(i+1))
 
 adaboost.save_ensemble_weights(path)

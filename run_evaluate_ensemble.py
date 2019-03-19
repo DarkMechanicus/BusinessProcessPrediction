@@ -78,16 +78,21 @@ for ensemble_type in glob.glob('*'):
     for models in glob.glob('*'):
         print(models)
         for max_size in pruning_ensemble_sizes:
-            print('Do run for {} models...'.format(max_size))
+            print('Do run for max {} models...'.format(max_size))
             ensemble.load_models(models, max_size, args)
             original_models = ensemble.models
             original_weights = ensemble.weights
 
             pruning_param_combinations = []
+            no_prune_count = 0
             for accuracy_lower_bound in pruning_accuracy_lower_bound:
                 for diversity_lower_bound in pruning_diversity_lower_bound:
                     for accuracy_method in pruningWrapper.AccuracyPruningMethods:
                         for diversity_method in pruningWrapper.DiversityPruningMethods:
+                            if accuracy_lower_bound == 0.0 and diversity_lower_bound == 0.0 and no_prune_count > 0:
+                                continue
+                            
+                            no_prune_count = 1
                             pruining_params = {
                                 'a_l_b': accuracy_lower_bound,
                                 'd_l_b': diversity_lower_bound,

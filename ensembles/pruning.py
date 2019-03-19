@@ -28,11 +28,33 @@ class PruningWrapper:
         self.diversity_method = DiversityPruningMethods(pruningParams['d_m'])
         self.args = args
 
+    def do_diversity_measure_computation(self, models, model_weights, data, solutions, path):
+        for i in range(len(models)):
+            with open('{}/{:03}-model_diversity_measures.csv'.format(path, i), 'a', newline='') as result_file:
+                writer = csv.writer(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                measures = []
+                for j in range(len(models)):
+                    if i == j:
+                        continue
+                    matrix = self.__compute_corecctness_matrix(models[i], models[j], data, solutions)
+                    measure = self.__compute_diversity_measure(matrix)
+                    measures.append(measure)
+                    writer.writerow(["{:03}-model".format(j), self.diversity_method.value, measure] + list(matrix.values()))
+
+    def do_accuracy_measure_computation(self, models, model_weights, data, solutions, path):
+        for i in range(len(models)):
+            with open('{}/{:03}-model_accuracy_measures.csv'.format(path, i), 'a', newline='') as result_file:
+                writer = csv.writer(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                model = models[i]
+                matrix = self.__compute_prediction_matrix(model, data, solutions)
+                metric = self.__compute_accuracy_measure(matrix)
+                writer.writerow([self.accuracy_method.value, metric] + list(matrix.values()))
 
     def do_pruning(self, models, model_weights, data, solutions, path):
-        diversity_pruned = self.__diversity_pruning(models, model_weights, data, solutions, path)
-        accuracy_pruned = self.__accuracy_pruning(diversity_pruned['models'], diversity_pruned['weights'], data, solutions)
-        return accuracy_pruned
+        accuracy_pruned = self.__accuracy_pruning(models, model_weights, data, solutions, path)
+        diversity_pruned = self.__diversity_pruning(accuracy_pruned['models'], accuracy_pruned['weights'], data, solutions, path)
+        
+        return diversity_pruned
 
     def __compute_corecctness_matrix(self, model_one, model_two, data, solutions):
         matrix = {
@@ -70,18 +92,13 @@ class PruningWrapper:
         pruned_models = []
         pruned_weights = []
         for i in range(len(models)):
-            with open('{}/{:03}-model_diversity_measures.csv'.format(path, i), 'w', newline='') as result_file:
-                writer = csv.writer(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow(["compared-model", "diversity-measure", "diversity", "one_correct", "two_correct", "both_correct", "neither_correct", "total"])
+            with open('{}/{:03}-model_diversity_measures.csv'.format(path, i), 'r', newline='') as result_file:
+                reader = csv.reader(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                data_rows = list(filter(lambda line: line[1] == self.diversity_method.value, reader))
                 measures = []
-                for j in range(len(models)):
-                    if i == j:
-                        continue
-                    matrix = self.__compute_corecctness_matrix(models[i], models[j], data, solutions)
-                    measure = self.__compute_diversity_measure(matrix)
-                    measures.append(measure)
-                    writer.writerow(["{:03}-model".format(j), self.diversity_method.value, measure] + list(matrix.values()))
-            
+                for row in data_rows:
+                    measures.append(row[3])
+
             avg_diversity = sum(measures) / len(measures)
             print('Model {} has avg. diversity of {}. Will {}be removed!'.format(i, avg_diversity, 'not ' if avg_diversity > self.diversity_lower_bound else ''))
             if avg_diversity > self.diversity_lower_bound:
@@ -133,7 +150,7 @@ class PruningWrapper:
         else:
             raise ValueError("unknown value for accuracy method: {}".format(self.accuracy_method))
 
-    def __accuracy_pruning(self, models, model_weights, data, solutions):
+    def __accuracy_pruning(self, models, model_weights, data, solutions, path):
         if self.accuracy_lower_bound <= 0.0:
             return {'models': models, 'weights': model_weights}
         
@@ -141,8 +158,12 @@ class PruningWrapper:
         pruned_weights=[]
         for i in range(len(models)):
             model = models[i]
-            matrix = self.__compute_prediction_matrix(model, data, solutions)
-            metric = self.__compute_accuracy_measure(matrix)
+            metric = np.nan
+            with open('{}/{:03}-model_accuracy_measures.csv'.format(path, i), 'r', newline='') as result_file:
+                reader = csv.reader(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                data_row = list(filter(lambda line: line[0] == self.accuracy_method.value, reader))[0]
+                metric = data_row[1]
+
             if metric == np.nan or metric == np.inf:
                 raise ValueError("{} as metric {}".format(metric, self.accuracy_method))
             print('Model {} has {} of {}. Will {}be removed!'.format(i, self.accuracy_method, metric, 'not ' if metric > self.accuracy_lower_bound else ''))
