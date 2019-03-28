@@ -61,11 +61,15 @@ import utility.models as modelWrapper
 class GenericEnsembleWrapper():
     def load_models(self, path, max_size, args):
         self.models = []
+        self.model_ids = []
+        i = 0
         for model_name in glob.glob('{}/*-model.h5'.format(path)):
             print('[Ensemble] Loading model {}...'.format(model_name))
             model = modelWrapper.CreateModel(args)
             model.load_weights('{}'.format(model_name))
             self.models.append(model)
+            self.model_ids.append(i)
+            i += 1
             if len(self.models) >= max_size:
                 break
         
@@ -80,7 +84,7 @@ class GenericEnsembleWrapper():
                         break
         self.path = path
 
-    def evaluate(self, samples, solutions, args, ensemble_type, ensemble, pruningParams, original_size, pruned_size):
+    def evaluate(self, samples, solutions, args, ensemble_type, ensemble, pruningParams, original_size, pruned_size, predictions):
         confusion_matrix = {
             'tp': 0,
             'fp': 0,
@@ -94,9 +98,11 @@ class GenericEnsembleWrapper():
             writer = csv.writer(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             print("Getting {} predictions...".format(len(samples)))
             for i in range(len(samples)):
-                test_data = samples[i]
+                #test_data = samples[i]
                 test_solution = solutions[i]
-                ensemble_prediction = self.__predict(test_data, args)
+                ensemble_prediction = self.__predict(i, args, predictions)
+                #ensemble_prediction_clean = self.__predict_clean(test_data, args)
+
                 ensemble_binary = -1 if ensemble_prediction < test_solution['planned'] else 1
                 result = {
                     'type': ensemble_type,
@@ -144,7 +150,22 @@ class GenericEnsembleWrapper():
             writer = csv.writer(acc_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             writer.writerow([ensemble_type, ensemble, pruningParams['a_m'], pruningParams['a_l_b'], pruningParams['d_m'], pruningParams['d_l_b'], original_size, pruned_size] + list(acc_results.values()))
 
-    def __predict(self, data, args):
+    def __predict(self, j, args, predictions):
+        graph = tf.get_default_graph()
+        with graph.as_default():
+            weighted_predictions = []
+            for i in range(len(self.models)):
+                model_id = self.model_ids[i]
+                weight = self.weights[i]
+                prediction = predictions[model_id][j][0][0]
+                prediction = (prediction * args['divisors'][6]) + args['offsets'][6]
+                weighted_predictions.append(prediction * weight)
+        
+        ensemble_prediction = sum(weighted_predictions) / len(weighted_predictions)
+
+        return ensemble_prediction
+
+    def __predict_clean(self, data, args):
         graph = tf.get_default_graph()
         with graph.as_default():
             weighted_predictions = []

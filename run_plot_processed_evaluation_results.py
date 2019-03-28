@@ -43,7 +43,6 @@ for ensemble in ensembles:
 
 plot.ylabel('MCC')
 plot.xlabel('process completion')
-plot.legend()
 plot.grid(True)
 plot.axis([0.0, 1.0, 0.0, 1.0])
 plot.savefig('./plots/{}.svg'.format('test'), transparent=True)

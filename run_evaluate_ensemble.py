@@ -14,9 +14,10 @@ parser.add_argument('--log_file', help="if true programm will log to a timestamp
 sys_args = parser.parse_args()
 
 # variables for evaluation
-pruning_accuracy_lower_bound = [0.1]
-pruning_diversity_lower_bound = [0.1]
-pruning_ensemble_sizes = [3, 50, 100, 150, 200, 250, 300]
+pruning_accuracy_lower_bound = [0.0, 0.5, 0.6, 0.7, 0.8, 0.9]
+pruning_diversity_lower_bound = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+# pruning_ensemble_sizes = [3, 50, 100, 150, 200, 250, 300]
+pruning_ensemble_sizes = [3, 11, 21, 31, 41, 50]
 
 train_args = {
     'datageneration_pattern': DataGenerationPattern.Fit,
@@ -64,6 +65,25 @@ with open('ensemble_accuracy_measurements.csv'.format(), 'w', newline='') as acc
     writer = csv.writer(acc_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
     writer.writerow(["type", "ensemble", "accuracy_method", "accuracy_lower_bound", "diversity_method", "diversity_lower_bound", "original_size", "pruned_size", 'precision', 'recall', 'specificity', 'false_positive_rate_norm', 'false_positive_rate', 'negative_prediction_value', 'accuracy', 'f1', 'mcc_norm', 'mcc'])
 
+non_prune_combination = False
+pruning_param_combinations = []
+for accuracy_method in pruningWrapper.AccuracyPruningMethods:
+    for diversity_method in pruningWrapper.DiversityPruningMethods:
+        for accuracy_lower_bound in pruning_accuracy_lower_bound:
+            for diversity_lower_bound in pruning_diversity_lower_bound:
+                if diversity_lower_bound == 0.0 and accuracy_lower_bound == 0.0 and non_prune_combination == True:
+                    continue
+                
+                pruining_params = {
+                    'a_l_b': accuracy_lower_bound,
+                    'd_l_b': diversity_lower_bound,
+                    'a_m': accuracy_method.value,
+                    'd_m': diversity_method.value
+                }
+                pruning_param_combinations.append(pruining_params)
+                if diversity_lower_bound == 0.0 and accuracy_lower_bound == 0.0:
+                    non_prune_combination = True
+
 print("Running through ensembles types...")
 for ensemble_type in glob.glob('*'):
     if not os.path.isdir(ensemble_type):
@@ -75,46 +95,39 @@ for ensemble_type in glob.glob('*'):
     print('[Ensemble] Evaluating all {} ensembles...'.format(ensemble_type))
     ensemble_result_data = []
     ensemble = evaluation.GenericEnsembleWrapper()
+    
     for models in glob.glob('*'):
         print(models)
-        for max_size in pruning_ensemble_sizes:
-            print('Do run for max {} models...'.format(max_size))
-            ensemble.load_models(models, max_size, args)
-            original_models = ensemble.models
-            original_weights = ensemble.weights
+        ensemble.load_models(models, 50, args)   
 
-            pruning_param_combinations = []
-            no_prune_count = 0
-            for accuracy_lower_bound in pruning_accuracy_lower_bound:
-                for diversity_lower_bound in pruning_diversity_lower_bound:
-                    for accuracy_method in pruningWrapper.AccuracyPruningMethods:
-                        for diversity_method in pruningWrapper.DiversityPruningMethods:
-                            if accuracy_lower_bound == 0.0 and diversity_lower_bound == 0.0 and no_prune_count > 0:
-                                continue
-                            
-                            no_prune_count = 1
-                            pruining_params = {
-                                'a_l_b': accuracy_lower_bound,
-                                'd_l_b': diversity_lower_bound,
-                                'a_m': accuracy_method.value,
-                                'd_m': diversity_method.value
-                            }
-                            pruning_param_combinations.append(pruining_params)
-            
+        print('Getting all predictions...')
+        predictions = []
+        for i in range(len(ensemble.models)):
+            p = []
+            for x in test_x:
+                p.append(ensemble.models[i].predict(x))
+            predictions.append(p)
+
+        original_models = ensemble.models
+        original_weights = ensemble.weights
+
+        for size in pruning_ensemble_sizes:
             for params in pruning_param_combinations:
-                print('Do configuration:\n{}'.format(params))
                 ensemble.models = original_models
                 ensemble.weights = original_weights
+                ensemble.models = ensemble.models[0:size]
+                ensemble.weights = ensemble.weights[0:size]
+                print('Do configuration with {} models:\n{}'.format(len(ensemble.models), params))
                 pruner = pruningWrapper.PruningWrapper(params, args)
                 print("Start pruning...")
-                pruned_data = pruner.do_pruning(ensemble.models, ensemble.weights, val_x, val_y, models)
+                pruned_data = pruner.do_pruning(ensemble.models, ensemble.weights, ensemble.model_ids, val_x, val_y, models)
                 ensemble.models = pruned_data['models']
                 ensemble.weights = pruned_data['weights']
                 if len(ensemble.models) == 0:
                     print("Abort for configuration {}, because there are no more models.".format(params))
                     continue
                 print("Start evaluation...")
-                ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params, len(original_models), len(pruned_data['models']))   
+                ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params, len(original_models), len(pruned_data['models']), predictions)   
             
     os.chdir(models_path)
 

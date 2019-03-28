@@ -34,7 +34,7 @@ val_x, val_y = evaluation.prepare_data(args, 'validationdata')
 ensemble = evaluation.GenericEnsembleWrapper()
 
 base_path = os.getcwd()
-os.chdir('models')
+os.chdir('data')
 
 for ensemble_type in glob.glob('*'):
     if not os.path.isdir(ensemble_type):
@@ -46,6 +46,14 @@ for ensemble_type in glob.glob('*'):
     os.chdir(ensemble_type)
     for models in glob.glob('*'):
         ensemble.load_models(models, 300, args)
+        print('Getting all predictions...')
+        predictions = []
+        for i in range(len(ensemble.models)):
+            p = []
+            for x in val_x:
+                p.append(ensemble.models[i].predict(x))
+            predictions.append(p)
+
         params_proto = {
             'a_l_b': 0.0,
             'd_l_b': 0.0,
@@ -58,6 +66,9 @@ for ensemble_type in glob.glob('*'):
             params.append(proto)
 
         for i in range(len(ensemble.models)):
+            if(os.path.isfile('{}/{:03}-model_accuracy_measures.csv'.format(models, i))):
+                continue
+                
             with open('{}/{:03}-model_accuracy_measures.csv'.format(models, i), 'w', newline='') as result_file:
                     writer = csv.writer(result_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
                     writer.writerow(["accuracy-measure", "accuracy", "true_positive", "false_positive", "true_negative", "false_negative", "total"])
@@ -65,6 +76,6 @@ for ensemble_type in glob.glob('*'):
         for p in params:
             print("Precomputing method '{}' for {} models".format(p['a_m'], len(ensemble.models)))
             pruner = pruningWrapper.PruningWrapper(p, args)
-            pruner.do_accuracy_measure_computation(ensemble.models, ensemble.weights, val_x, val_y, models)
+            pruner.do_accuracy_measure_computation(ensemble.models, ensemble.weights, val_x, val_y, models, predictions)
     
     os.chdir(models_path)
