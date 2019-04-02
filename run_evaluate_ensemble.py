@@ -127,7 +127,7 @@ for ensemble_type in glob.glob('*'):
                     print("Abort for configuration {}, because there are no more models.".format(params))
                     continue
                 print("Start evaluation...")
-                ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params, len(original_models), len(pruned_data['models']), predictions)   
+                ensemble.evaluate(test_x, test_y, args, ensemble_type, models, params, size, len(pruned_data['models']), predictions)   
             
     os.chdir(models_path)
 
